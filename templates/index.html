@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Human-in-the-Loop Review</title>
+</head>
+<body>
+    <h2>Upload an Image (JPG/PNG):</h2>
+    <form method="post" enctype="multipart/form-data">
+        <input type="file" name="image" accept=".jpg,.jpeg,.png" required>
+        <button type="submit">Upload</button>
+    </form>
+
+    <hr>
+
+    <h2>Image to Review:</h2>
+    <img src="{{ url_for('uploaded_file', filename=image_name) }}" width="400"><br><br>
+
+    <form method="post">
+        <input type="hidden" name="image_name" value="{{ image_name }}">
+        <button name="feedback" value="confirm">✅ Confirm</button>
+        <button name="feedback" value="reject">❌ Reject</button>
+    </form>
+</body>
+</html>
