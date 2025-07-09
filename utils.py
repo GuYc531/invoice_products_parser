@@ -8,7 +8,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
+import os
 
 def read_ocr_from_google_vision_api(img_path:str, load_from_local: bool = False):
     with open(img_path, 'rb') as image_file:
@@ -40,7 +40,8 @@ def remove_false_detected_close_horizontal_lines(bounding_boxes: list, vertical:
     return bounding_boxes
 
 
-def detect_lines(img:np.ndarray, detection_type: str, low_threshold: int = 0, kernel_size: int = 15, plot: bool = False) -> List:
+def detect_lines(img:np.ndarray, detection_type: str, low_threshold: int = 0,
+                 kernel_size: int = 15, plot: bool = False, save:bool=False) -> List:
     if img is None:
         raise ValueError("Image not found or path incorrect.")
 
@@ -86,21 +87,25 @@ def detect_lines(img:np.ndarray, detection_type: str, low_threshold: int = 0, ke
         is_vertical = True if detection_type == 'vertical' else False
         bounding_boxes = remove_false_detected_close_horizontal_lines(bounding_boxes, vertical=is_vertical)
 
+
+    img_with_boxes = img.copy()
+    for i, (x, y, w, h) in enumerate(bounding_boxes):
+        cv2.rectangle(img_with_boxes, (x, y), (x + w, y + h), (0, 0, 255), 2)
+        if detection_type != 'table':
+            cv2.putText(img_with_boxes, str(i), (x + w + 5, y + h),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+
+    img_rgb = cv2.cvtColor(img_with_boxes, cv2.COLOR_BGR2RGB)
     if plot:
 
-        img_with_boxes = img.copy()
-        for i, (x, y, w, h) in enumerate(bounding_boxes):
-            cv2.rectangle(img_with_boxes, (x, y), (x + w, y + h), (0, 0, 255), 2)
-            if detection_type != 'table':
-                cv2.putText(img_with_boxes, str(i), (x + w + 5, y + h),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
-
-        img_rgb = cv2.cvtColor(img_with_boxes, cv2.COLOR_BGR2RGB)
         plt.figure(figsize=(12, 10))
         plt.imshow('img', img_rgb)
         plt.axis("off")
         plt.title(f"Detected {detection_type} Bounding Boxes")
-        plt.show()
+
+    file_name = f"{detection_type}_image.jpeg"
+    path = os.path.join(os.getenv('saved_images_dir'), file_name)
+    cv2.imwrite(path, img_rgb)
     return bounding_boxes
 
 
@@ -209,7 +214,7 @@ def get_cropped_image_offset(polygon) -> Tuple[int, int]:
     return x_min, y_min
 
 
-def crop_image_by_polygon(img:np.ndarray, polygon, plot=True):
+def crop_image_by_polygon(img:np.ndarray, polygon, plot:str=False, save:bool=False):
     xs = [pt[0] for pt in polygon]
     ys = [pt[1] for pt in polygon]
     x_min, x_max = min(xs), max(xs)
@@ -220,6 +225,10 @@ def crop_image_by_polygon(img:np.ndarray, polygon, plot=True):
         cv2.imshow('cropped',cropped)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+    if save:
+        save_path = f'{os.getenv("saved_images_dir")}/table_detection.jpeg'
+        cv2.imwrite(save_path, cropped)
+
     return cropped
 
 
@@ -235,7 +244,7 @@ def get_random_color():
     return tuple(random.randint(0, 255) for _ in range(3))
 
 
-def word_location_between_lines(img:np.ndarray, relevant_words, bounding_boxes, vertical=True, x0=0, y0=0, plot=True):
+def word_location_between_lines(img:np.ndarray, relevant_words, bounding_boxes, vertical=True, x0=0, y0=0, plot=False):
     x_locations = {}
 
     sorted_contours = [tuple(i + np.array([x0, y0, 0, 0])) for i in bounding_boxes]
@@ -252,28 +261,33 @@ def word_location_between_lines(img:np.ndarray, relevant_words, bounding_boxes, 
         for i in range(len(min_positions) - 1):
             if min_positions[i] <= target_x <= min_positions[i + 1]:
                 x_locations[word_index] = (str(f"{i}-{i + 1}"), word)
-                if plot:
-                    if vertical:
-                        cv2.putText(img, str(f"{i}-{i + 1}"), (target_x + 5, word[2][1] + 2),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
-                    else:
-                        cv2.putText(img, str(f"{i}-{i + 1}"), (word[2][0] + 2, target_x + 5),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+                # if plot:
+                if vertical:
+                    cv2.putText(img, str(f"{i}-{i + 1}"), (target_x + 5, word[2][1] + 2),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
+                else:
+                    cv2.putText(img, str(f"{i}-{i + 1}"), (word[2][0] + 2, target_x + 5),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0), 1)
 
                 break
 
-        if plot:
-            pts = np.array(word, dtype=np.int32)
-            cv2.polylines(img, [pts], isClosed=True, color=(0, 0, 255), thickness=1)
+        # if plot:
+        pts = np.array(word, dtype=np.int32)
+        cv2.polylines(img, [pts], isClosed=True, color=(0, 0, 255), thickness=1)
+
+    plot_sorted_contours(img, sorted_contours)
     if plot:
-        plot_sorted_contours(img, sorted_contours)
         cv2.imshow('texts',img)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+    file_name = f"vertical_words_image.jpeg" if vertical else  f"horizontal_words_image.jpeg"
+    path = os.path.join(os.getenv('saved_images_dir'), file_name)
+    cv2.imwrite(path, img)
+
     return x_locations
 
 
-def create_grouped_words_by_row_or_col(img:np.ndarray, x_locations, plot=True):
+def create_grouped_words_by_row_or_col(img:np.ndarray, x_locations, plot=False):
     merged = defaultdict(list)
 
     for key, value in x_locations.items():
@@ -320,14 +334,17 @@ def create_df_for_words(horizontal_x_locations, vertical_x_locations, rellevant_
     return merged
 
 
-def plot_df_words(img:np.ndarray, df, plot=True):
+def plot_df_words(img:np.ndarray, df, plot=False):
     for index, row in df.iterrows():
         pts = np.array(row['box'], dtype=np.int32)
         cv2.polylines(img, [pts], isClosed=True, color=(0, 0, 0), thickness=1)
-
-    cv2.imshow('words',img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    if plot:
+        cv2.imshow('words',img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+    file_name = f"full_words_image.jpeg"
+    path = os.path.join(os.getenv('saved_images_dir'), file_name)
+    cv2.imwrite(path, img)
 
 
 def validate_table_df(table_df: pd.DataFrame) -> pd.DataFrame:

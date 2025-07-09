@@ -1,24 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Human-in-the-Loop Review</title>
+    <title>Human-in-the-Loop Stages</title>
 </head>
 <body>
-    <h2>Upload an Image (JPG/PNG):</h2>
-    <form method="post" enctype="multipart/form-data">
-        <input type="file" name="image" accept=".jpg,.jpeg,.png" required>
-        <button type="submit">Upload</button>
-    </form>
+    <h2>Stage {{ stage }}</h2>
 
-    <hr>
+    {% if stage == 1 %}
+        <form method="post" enctype="multipart/form-data">
+            <p>Upload an image to start the process:</p>
+            <input type="file" name="image" accept="image/*" required>
+            <button type="submit">Upload</button>
+        </form>
 
-    <h2>Image to Review:</h2>
-    <img src="{{ url_for('uploaded_file', filename=image_name) }}" width="400"><br><br>
+    {% elif stage in [2, 3, 4, 5,6 , 7] %}
+        <h3>Review Image (Stage {{ stage }})</h3>
+        <img src="{{ url_for('display_image', folder=folder, filename=image) }}" width="400"><br><br>
+        <form method="post">
+            <button name="action" value="approve">✅ Approve</button>
+            <button name="action" value="reject">❌ Reject</button>
+        </form>
 
-    <form method="post">
-        <input type="hidden" name="image_name" value="{{ image_name }}">
-        <button name="feedback" value="confirm">✅ Confirm</button>
-        <button name="feedback" value="reject">❌ Reject</button>
-    </form>
+    {% elif stage == 8 %}
+        <h3>✅ Process Complete</h3>
+        <img src="{{ url_for('display_image', folder=folder, filename=image) }}" width="400"><br>
+        <p>Thank you for your review.</p>
+    {% endif %}
 </body>
 </html>
