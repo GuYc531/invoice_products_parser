@@ -4,27 +4,65 @@
     <title>Human-in-the-Loop Stages</title>
 </head>
 <body>
-    <h2>Stage {{ stage }}</h2>
+<h2>Stage {{ stage }}</h2>
+{% if sentence %}
+<p><strong>{{ sentence }}</strong></p>
+{% endif %}
 
-    {% if stage == 1 %}
-        <form method="post" enctype="multipart/form-data">
-            <p>Upload an image to start the process:</p>
-            <input type="file" name="image" accept="image/*" required>
-            <button type="submit">Upload</button>
-        </form>
+{% if stage == 1 %}
+<form method="post" enctype="multipart/form-data">
+    <input type="file" name="image" accept="image/*" required>
+    <button type="submit">Upload</button>
+</form>
 
-    {% elif stage in [2, 3, 4, 5,6 , 7] %}
-        <h3>Review Image (Stage {{ stage }})</h3>
-        <img src="{{ url_for('display_image', folder=folder, filename=image) }}" width="400"><br><br>
-        <form method="post">
-            <button name="action" value="approve">✅ Approve</button>
-            <button name="action" value="reject">❌ Reject</button>
-        </form>
+{% elif stage in [2, 3, 4, 5,6 , 7] %}
+<!--<h3>Review Image (Stage {{ stage }})</h3>-->
+<img src="{{ url_for('display_image', folder=folder, filename=image) }}" width="400"><br><br>
+<form method="post">
+    <button name="action" value="approve">✅ Approve</button>
+    <button name="action" value="reject">❌ Reject</button>
+</form>
 
-    {% elif stage == 8 %}
-        <h3>✅ Process Complete</h3>
+{% elif stage == 8 %}
+<!--<h3>✅ Process Complete</h3>-->
+<div style="display: flex; gap: 20px; align-items: flex-start;">
+    <div>
         <img src="{{ url_for('display_image', folder=folder, filename=image) }}" width="400"><br>
         <p>Thank you for your review.</p>
-    {% endif %}
+        <form method="post">
+            <button name="reset_action" value="reset">🔄 Reset to Stage 1</button>
+        </form>
+    </div>
+
+    <!-- Display CSV as HTML table -->
+    <div>
+        {% if table_data.index|length > 0 %}
+        <h4>Result Table:</h4>
+        <table border="1">
+            <thead>
+            <tr>
+                {% for col in table_data.columns %}
+                <th>{{ col }}</th>
+                {% endfor %}
+            </tr>
+            </thead>
+            <tbody>
+            {% for row in table_data.values %}
+            <tr>
+                {% for val in row %}
+                <td>{{ val }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <br>
+        <a href="{{ url_for('download_csv') }}">⬇️ Download as CSV</a>
+        {% endif %}
+
+    </div>
+</div>
+{% endif %}
+
 </body>
 </html>

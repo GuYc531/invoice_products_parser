@@ -10,7 +10,8 @@ import numpy as np
 import pandas as pd
 import os
 
-def read_ocr_from_google_vision_api(img_path:str, load_from_local: bool = False):
+
+def read_ocr_from_google_vision_api(img_path: str, load_from_local: bool = False):
     with open(img_path, 'rb') as image_file:
         content = image_file.read()
 
@@ -40,8 +41,8 @@ def remove_false_detected_close_horizontal_lines(bounding_boxes: list, vertical:
     return bounding_boxes
 
 
-def detect_lines(img:np.ndarray, detection_type: str, low_threshold: int = 0,
-                 kernel_size: int = 15, plot: bool = False, save:bool=False) -> List:
+def detect_lines(img: np.ndarray, detection_type: str, low_threshold: int = 0,
+                 kernel_size: int = 15, plot: bool = False, save: bool = False) -> List:
     if img is None:
         raise ValueError("Image not found or path incorrect.")
 
@@ -87,7 +88,6 @@ def detect_lines(img:np.ndarray, detection_type: str, low_threshold: int = 0,
         is_vertical = True if detection_type == 'vertical' else False
         bounding_boxes = remove_false_detected_close_horizontal_lines(bounding_boxes, vertical=is_vertical)
 
-
     img_with_boxes = img.copy()
     for i, (x, y, w, h) in enumerate(bounding_boxes):
         cv2.rectangle(img_with_boxes, (x, y), (x + w, y + h), (0, 0, 255), 2)
@@ -97,14 +97,13 @@ def detect_lines(img:np.ndarray, detection_type: str, low_threshold: int = 0,
 
     img_rgb = cv2.cvtColor(img_with_boxes, cv2.COLOR_BGR2RGB)
     if plot:
-
         plt.figure(figsize=(12, 10))
         plt.imshow('img', img_rgb)
         plt.axis("off")
         plt.title(f"Detected {detection_type} Bounding Boxes")
 
     file_name = f"{detection_type}_image.jpeg"
-    path = os.path.join(os.getenv('saved_images_dir'), file_name)
+    path = os.path.join(os.getenv('STAGE_DIR'), file_name)
     cv2.imwrite(path, img_rgb)
     return bounding_boxes
 
@@ -137,7 +136,8 @@ def box_contains(box_outer, box_inner):
     return box_outer
 
 
-def draw_box(img:np.ndarray, vertices, color: Tuple[int] = (0, 255, 0), thickness: int = 1, font_scale: int = 2) -> None:
+def draw_box(img: np.ndarray, vertices, color: Tuple[int] = (0, 255, 0), thickness: int = 1,
+             font_scale: int = 2) -> None:
     points = [(v.x, v.y) for v in vertices]
     pts = np.array(points, dtype=np.int32)
 
@@ -148,21 +148,22 @@ def draw_box(img:np.ndarray, vertices, color: Tuple[int] = (0, 255, 0), thicknes
         cv2.putText(img, f'({x}, {y})', (x, y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, color, 1)
 
 
-def get_max_table(table_bounding_boxes_dict: dict) -> int:
+def get_max_table(table_bounding_boxes_dict: dict, not_good_max_keys:List[int]) -> int:
     max_val, max_key = 0, None
     for key, value in table_bounding_boxes_dict.items():
-        if value[1] > max_val:
+        if value[1] > max_val and key not in not_good_max_keys:
             max_val = value[1]
             max_key = key
     return max_key
 
 
-def plot_table_bounding_boxes(img:np.ndarray, table):
+def plot_table_bounding_boxes(img: np.ndarray, table):
     pts = np.array(table[0], dtype=np.int32)
     cv2.polylines(img, [pts], isClosed=True, color=(0, 0, 255), thickness=3)
 
 
-def get_table_with_most_words(img:np.ndarray, response, table_bounding_boxes_dict: dict, plot: bool = False) -> int:
+def get_table_with_most_words(img: np.ndarray, response, table_bounding_boxes_dict: dict, plot: bool = False,
+                              not_good_max_keys: List[int] = []) -> int:
     for page in response.full_text_annotation.pages:
         for block in page.blocks:
             for paragraph in block.paragraphs:
@@ -174,12 +175,12 @@ def get_table_with_most_words(img:np.ndarray, response, table_bounding_boxes_dic
                         draw_box(img, word.bounding_box.vertices, label='word', color=(0, 100, 200), font_scale=0.4)
 
     # get table with max words inside it
-    max_key = get_max_table(table_bounding_boxes_dict)
+    max_key = get_max_table(table_bounding_boxes_dict, not_good_max_keys)
 
     if plot:
         plot_table_bounding_boxes(img, table_bounding_boxes_dict[max_key])
 
-        cv2.imshow('img',img)
+        cv2.imshow('img', img)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
     return max_key
@@ -214,7 +215,7 @@ def get_cropped_image_offset(polygon) -> Tuple[int, int]:
     return x_min, y_min
 
 
-def crop_image_by_polygon(img:np.ndarray, polygon, plot:str=False, save:bool=False):
+def crop_image_by_polygon(img: np.ndarray, polygon, plot: str = False, save: bool = False):
     xs = [pt[0] for pt in polygon]
     ys = [pt[1] for pt in polygon]
     x_min, x_max = min(xs), max(xs)
@@ -222,17 +223,17 @@ def crop_image_by_polygon(img:np.ndarray, polygon, plot:str=False, save:bool=Fal
 
     cropped = img[y_min:y_max, x_min:x_max]
     if plot:
-        cv2.imshow('cropped',cropped)
+        cv2.imshow('cropped', cropped)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
     if save:
-        save_path = f'{os.getenv("saved_images_dir")}/table_detection.jpeg'
+        save_path = f'{os.getenv("STAGE_DIR")}/table_detection.jpeg'
         cv2.imwrite(save_path, cropped)
 
     return cropped
 
 
-def plot_sorted_contours(img:np.ndarray, sorted_contours) -> None:
+def plot_sorted_contours(img: np.ndarray, sorted_contours) -> None:
     for i, cnt in enumerate(sorted_contours):
         x, y, w, h = cnt[0], cnt[1], cnt[2], cnt[3]
         cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 3)
@@ -244,7 +245,7 @@ def get_random_color():
     return tuple(random.randint(0, 255) for _ in range(3))
 
 
-def word_location_between_lines(img:np.ndarray, relevant_words, bounding_boxes, vertical=True, x0=0, y0=0, plot=False):
+def word_location_between_lines(img: np.ndarray, relevant_words, bounding_boxes, vertical=True, x0=0, y0=0, plot=False):
     x_locations = {}
 
     sorted_contours = [tuple(i + np.array([x0, y0, 0, 0])) for i in bounding_boxes]
@@ -277,17 +278,17 @@ def word_location_between_lines(img:np.ndarray, relevant_words, bounding_boxes, 
 
     plot_sorted_contours(img, sorted_contours)
     if plot:
-        cv2.imshow('texts',img)
+        cv2.imshow('texts', img)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
-    file_name = f"vertical_words_image.jpeg" if vertical else  f"horizontal_words_image.jpeg"
-    path = os.path.join(os.getenv('saved_images_dir'), file_name)
+    file_name = f"vertical_words_image.jpeg" if vertical else f"horizontal_words_image.jpeg"
+    path = os.path.join(os.getenv('STAGE_DIR'), file_name)
     cv2.imwrite(path, img)
 
     return x_locations
 
 
-def create_grouped_words_by_row_or_col(img:np.ndarray, x_locations, plot=False):
+def create_grouped_words_by_row_or_col(img: np.ndarray, x_locations, plot=False):
     merged = defaultdict(list)
 
     for key, value in x_locations.items():
@@ -301,7 +302,7 @@ def create_grouped_words_by_row_or_col(img:np.ndarray, x_locations, plot=False):
                 cv2.polylines(img, [pts], isClosed=True, color=color, thickness=1)
 
     if plot:
-        cv2.imshow('image',img)
+        cv2.imshow('image', img)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
     return merged
@@ -334,16 +335,16 @@ def create_df_for_words(horizontal_x_locations, vertical_x_locations, rellevant_
     return merged
 
 
-def plot_df_words(img:np.ndarray, df, plot=False):
+def plot_df_words(img: np.ndarray, df, plot=False):
     for index, row in df.iterrows():
         pts = np.array(row['box'], dtype=np.int32)
         cv2.polylines(img, [pts], isClosed=True, color=(0, 0, 0), thickness=1)
     if plot:
-        cv2.imshow('words',img)
+        cv2.imshow('words', img)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
     file_name = f"full_words_image.jpeg"
-    path = os.path.join(os.getenv('saved_images_dir'), file_name)
+    path = os.path.join(os.getenv('STAGE_DIR'), file_name)
     cv2.imwrite(path, img)
 
 

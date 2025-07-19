@@ -25,6 +25,7 @@ class Parser:
         self.horizontal_bounding_boxes = None
         self.table_image_path = None
         self.table_bounding_boxes_dict = None
+        self.max_keys_not_valid = []
 
     def inserted_uploaded_image_path(self, uploaded_image_path: str) -> None:
         self.uploaded_image_path = uploaded_image_path
@@ -37,10 +38,12 @@ class Parser:
         table_bounding_boxes = u.detect_lines(self.img, detection_type='table', low_threshold=0, kernel_size=30)
         self.table_bounding_boxes_dict = {index: (u.rect_to_vertices(i[0], i[1], i[2], i[3]), 0) \
                                           for index, i in enumerate(table_bounding_boxes)}
-        self.max_key = u.get_table_with_most_words(self.img, self.response, self.table_bounding_boxes_dict)
+        self.max_key = u.get_table_with_most_words(self.img, self.response, self.table_bounding_boxes_dict,
+                                                   not_good_max_keys=self.max_keys_not_valid)
+        self.max_keys_not_valid.append(self.max_key)
         self.cropped = u.crop_image_by_polygon(self.img, self.table_bounding_boxes_dict[self.max_key][0], save=True)
         file_name = 'table_detection.jpeg'
-        self.table_image_path = os.path.join(os.getenv('saved_images_dir'), file_name)
+        self.table_image_path = os.path.join(os.getenv('STAGE_DIR'), file_name)
         return file_name
 
     def get_lines(self, vertical: bool = True) -> str:
@@ -79,32 +82,5 @@ class Parser:
 
         u.plot_df_words(img, df)
 
-        # vertical_x_locations_grouped = u.create_grouped_words_by_row_or_col(self.img, self.vertical_x_locations)
-        # horizontal_x_locations_grouped = u.create_grouped_words_by_row_or_col(self.img, self.horizontal_x_locations)
-
         final_df = u.convert_df_to_table(df, remove_last_rows=1)
         return 'full_words_image.jpeg', final_df
-
-
-def stage_1(image_path):
-    img = cv2.imread(image_path)
-    file_name = 'stage_1.jpeg'
-    save_path = os.path.join(os.getenv("saved_images_dir"), file_name)
-    cv2.imwrite(save_path, img)
-    return file_name
-
-
-def stage_2(image_path):
-    img = cv2.imread(image_path)
-    file_name = 'stage_2.jpeg'
-    save_path = os.path.join(os.getenv("saved_images_dir"), file_name)
-    cv2.imwrite(save_path, img)
-    return file_name
-
-
-def stage_3(image_path):
-    img = cv2.imread(image_path)
-    file_name = 'stage_3.jpeg'
-    save_path = os.path.join(os.getenv("saved_images_dir"), file_name)
-    cv2.imwrite(save_path, img)
-    return file_name
