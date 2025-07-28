@@ -25,13 +25,6 @@ stage_sentences = {
      You can download to csv if needed'''
 }
 
-# TODO: 1. how to show table in UI? VVVV
-# TODO: 2. adjust table detection to be requersive if user choses no VVVV
-# TODO: 3. clean code
-# TODO: 4. need to let the user chose how many last rows to remove from table df
-# TODO: 5. need to show less data in image in stages 6 and 7
-# TODO: 6. need to add css to be more user friendly
-# TODO: 7. need to add dockerfile and compose
 
 current_stage = 1
 stage_images = {}
