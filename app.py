@@ -2,7 +2,7 @@ import pandas as pd
 from flask import Flask, request, render_template, redirect, url_for, send_from_directory, send_file
 import os
 import io
-from Parser import Parser
+from backend.Parser import Parser
 
 app = Flask(__name__)
 UPLOAD_DIR = os.getenv('UPLOAD_DIR')

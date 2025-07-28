@@ -3,7 +3,7 @@ from typing import Tuple
 import cv2
 import pandas as pd
 
-import utils as u
+from backend import utils as u
 from dotenv import load_dotenv
 import os
 
