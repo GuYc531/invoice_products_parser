@@ -1,6 +1,7 @@
 # invoice_products_parser
 
-A web-based application built with **Flask**, **OpenCV**, and **Python** for parsing and extracting structured data from invoice images (JPEG/PDF). This project includes a simple UI, image preprocessing pipeline, and text extraction with AI.
+A web-based application built with **Flask**, **OpenCV**, and **Python** for parsing and extracting structured data from invoice images (JPEG/JPG).
+This project includes a simple UI, image preprocessing pipeline, and text extraction with Google vision API.
 
 ## 🚀 Features
 
